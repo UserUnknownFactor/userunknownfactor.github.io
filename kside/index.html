@@ -6,7 +6,7 @@
 
     <!-- SCRIPT_INJECTION_POINT -->
 
-    <script src="./lib/_npm/ravenjs/raven.min.js"></script>
+    <!-- script src="./lib/_npm/ravenjs/raven.min.js"></script -->
 
     <link rel="stylesheet" type="text/css" href="./lib/_npm/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="./css/contextmenu.css" />
@@ -58,7 +58,7 @@
 <div id="infoPanel">
     <selection-input :start="selectionStart" :end="selectionEnd" @selectionChanged="selectionChanged"></selection-input>
     <div id="selectionLengthDiv">
-      Selection length: <span>{{selectionEnd-selectionStart+1}}</span>
+      Selection length: <span>{{selectionEnd-selectionStart+1}} (0x{{(selectionEnd-selectionStart+1).toString(16)}})</span>
     </div>
     <div id="disableLazyParsingDiv">
         <input type="checkbox" id="disableLazyParsing" v-model="disableLazyParsing" />
@@ -119,7 +119,7 @@
                 <li><a tabindex="-1" href="#" data-kslang="json" data-acelang="json">JSON</a></li>
             </ul>
         </li>
-        <li class="downloadItem"><a tabindex="-1" href="#"><i class="glyphicon glyphicon-cloud-download"></i> Download</a></li>
+        <li class="downloadItem"><a title="Click here to see more cool tips!" tabindex="-1" href="#"><i class="glyphicon glyphicon-cloud-download"></i> Download</a></li>
         <li class="deleteItem"><a tabindex="-1" href="#"><i class="glyphicon glyphicon-remove"></i> Delete</a></li>
     </ul>
 </div>

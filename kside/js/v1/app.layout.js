@@ -80,7 +80,7 @@ define(["require", "exports", "goldenlayout", "../HexViewer"], function (require
                                                         { type: "component", componentName: "parsedDataTree", title: "object tree", isClosable: false },
                                                     ] },
                                             ] },
-                                        { type: "stack", id: "codeTab", activeItemIndex: 2, content: [
+                                        { type: "stack", id: "codeTab", activeItemIndex: 3, content: [
                                                 { type: "component", componentName: "genCodeViewer", title: "JavaScript", isClosable: false },
                                                 { type: "component", componentName: "genPythonViewer", title: "Python", isClosable: true },
                                                 { type: "component", componentName: "genCodeDebugViewer", title: "JavaScript (debug)", isClosable: false },
