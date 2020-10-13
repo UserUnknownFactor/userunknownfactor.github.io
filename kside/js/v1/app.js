@@ -54,8 +54,8 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
             app_files_1.initFileTree();
         }
         isKsyFile(fn) { return fn.toLowerCase().endsWith(".ksy"); }
-        compile(srcYamlFsItem, srcYaml, kslang, debug) {
-            return this.compilerService.compile(srcYamlFsItem, srcYaml, kslang, debug).then(result => {
+        compile(srcYamlFsItem, srcYaml, kslang, debug, readWrite) {
+            return this.compilerService.compile(srcYamlFsItem, srcYaml, kslang, debug, readWrite).then(result => {
                 ga("compile", "success");
                 return result;
             }, (error) => {
@@ -74,19 +74,22 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
             }
             if (changed)
                 await app_files_1.fss[ksyFsItem.fsType].put(ksyFsItem.fn, srcYaml);
-            let compiled = await this.compile(ksyFsItem, srcYaml, "javascript", "both");
-            let compiledpy = await this.compile(ksyFsItem, srcYaml, "python", "both");
+            let compiled = await this.compile(ksyFsItem, srcYaml, "javascript", "both", false);
             if (!compiled)
                 return;
             var fileNames = Object.keys(compiled.release);
-            var fileNamesPy = Object.keys(compiledpy.release);
+
             let debugUserTypes = localStorage.getItem("userTypes") || "";
             if (debugUserTypes)
                 debugUserTypes += "\n\n";
             this.ui.genCodeViewer.setValue(debugUserTypes + fileNames.map(x => compiled.release[x]).join(""), -1);
-            this.ui.genPythonViewer.setValue(debugUserTypes + fileNamesPy.map(x => compiledpy.release[x]).join(""), -1);
             this.ui.genCodeDebugViewer.setValue(debugUserTypes + fileNames.map(x => compiled.debug[x]).join(""), -1);
             await this.reparse();
+
+            let compiledpy = await this.compile(ksyFsItem, srcYaml, "python", "both", false);
+            this.ui.genPythonViewerR.setValue(debugUserTypes + Object.keys(compiledpy.release).map(x => compiledpy.release[x]).join(""), -1);
+            compiledpy = await this.compile(ksyFsItem, srcYaml, "python", "both", true);
+            this.ui.genPythonViewer.setValue(debugUserTypes + Object.keys(compiledpy.release).map(x => compiledpy.release[x]).join(""), -1);
         }
         async reparse() {
             try {

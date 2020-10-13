@@ -63,7 +63,7 @@ define(["require", "exports", "./app.files", "./utils/PerformanceHelper", "kaita
         constructor() {
             this.jsImporter = new JsImporter();
         }
-        compile(srcYamlFsItem, srcYaml, kslang, debug) {
+        compile(srcYamlFsItem, srcYaml, kslang, debug, readWrite) {
             var perfYamlParse = PerformanceHelper_1.performanceHelper.measureAction("YAML parsing");
             this.jsImporter.rootFsItem = srcYamlFsItem;
             try {
@@ -82,14 +82,14 @@ define(["require", "exports", "./app.files", "./utils/PerformanceHelper", "kaita
             else {
                 var perfCompile = PerformanceHelper_1.performanceHelper.measureAction("Compilation");
                 var ks = new KaitaiStructCompiler();
-                var rReleasePromise = (debug === false || debug === "both") ? ks.compile(kslang, compilerSchema, this.jsImporter, false) : Promise.resolve(null);
-                var rDebugPromise = (debug === true || debug === "both") ? ks.compile(kslang, compilerSchema, this.jsImporter, true) : Promise.resolve(null);
+                var rReleasePromise = (debug === false || debug === "both") ? ks.compile(kslang, compilerSchema, this.jsImporter, false, readWrite) : Promise.resolve(null);
+                var rDebugPromise = (debug === true || debug === "both") ? ks.compile(kslang, compilerSchema, this.jsImporter, true, readWrite) : Promise.resolve(null);
                 //console.log("rReleasePromise", rReleasePromise, "rDebugPromise", rDebugPromise);
                 return perfCompile.done(Promise.all([rReleasePromise, rDebugPromise]))
                     .then(([rRelease, rDebug]) => {
                     //console.log("rRelease", rRelease, "rDebug", rDebug);
                     return rRelease && rDebug ? { debug: rDebug, release: rRelease } : rRelease ? rRelease : rDebug;
-                }).catch(compileErr => Promise.reject(new CompilationError("kaitai", compileErr)));
+                }).catch(compileErr => readWrite ? Promise.resolve(null) : Promise.reject(new CompilationError("kaitai", compileErr))); // HACK: Disable errors for readwrite compilers
             }
         }
     }

@@ -80,17 +80,18 @@ define(["require", "exports", "goldenlayout", "../HexViewer"], function (require
                                                         { type: "component", componentName: "parsedDataTree", title: "object tree", isClosable: false },
                                                     ] },
                                             ] },
-                                        { type: "stack", id: "codeTab", activeItemIndex: 3, content: [
-                                                { type: "component", componentName: "genCodeViewer", title: "JavaScript", isClosable: false },
-                                                { type: "component", componentName: "genPythonViewer", title: "Python", isClosable: true },
-                                                { type: "component", componentName: "genCodeDebugViewer", title: "JavaScript (debug)", isClosable: false },
+                                        { type: "stack", id: "codeTab", activeItemIndex: 0, content: [
                                                 { type: "column", isClosable: false, id: "inputBinaryTab", title: "input binary", content: [
                                                         { type: "component", componentName: "hexViewer", title: "hex viewer", isClosable: false },
                                                         { type: "row", isClosable: false, height: 35, content: [
                                                                 { type: "component", componentName: "infoPanel", title: "info panel", isClosable: false, width: 40 },
                                                                 { type: "component", componentName: "converterPanel", title: "converter", isClosable: false },
                                                             ] }
-                                                    ] }
+                                                    ] },
+                                                { type: "component", componentName: "genCodeViewer", title: "JavaScript", isClosable: true },
+                                                { type: "component", componentName: "genPythonViewer", title: "Python (R/W)", isClosable: true },
+                                                { type: "component", componentName: "genPythonViewerR", title: "Python (R)", isClosable: true },
+                                                { type: "component", componentName: "genCodeDebugViewer", title: "JavaScript (debug)", isClosable: true }
                                             ] }
                                     ] },
                             ]
@@ -101,6 +102,7 @@ define(["require", "exports", "goldenlayout", "../HexViewer"], function (require
             this.layout.addEditor("ksyEditor", "yaml");
             this.layout.addEditor("genCodeViewer", "javascript", true);
             this.layout.addEditor("genPythonViewer", "python", true);
+            this.layout.addEditor("genPythonViewerR", "python", true);
             this.layout.addEditor("genCodeDebugViewer", "javascript", false);
             this.layout.addComponent("hexViewer", () => {
                 var hexViewer = new HexViewer_1.HexViewer("#hexViewer");
