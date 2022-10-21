@@ -2,15 +2,17 @@ meta:
   id: renderware_binary_stream
   title: RenderWare binary stream
   application: Games based on RenderWare engine (Grand Theft Auto 3D series)
+  xref:
+    wikidata: Q29960668
   endian: le
-doc-ref: https://www.gtamodding.com/wiki/RenderWare_binary_stream_file
+doc-ref: https://gtamods.com/wiki/RenderWare_binary_stream_file
 seq:
   - id: code
     type: u4
     enum: sections
   - id: size
     type: u4
-  - id: version
+  - id: library_id_stamp
     type: u4
   - id: body
     size: size
@@ -23,6 +25,9 @@ seq:
         sections::geometry_list: list_with_header
         sections::texture_dictionary: list_with_header
         sections::texture_native: list_with_header
+instances:
+  version:
+    value: 'library_id_stamp & 0xFFFF0000 != 0 ? (library_id_stamp >> 14 & 0x3FF00) + 0x30000 | (library_id_stamp >> 16 & 0x3F) : library_id_stamp << 8'
 types:
   list_with_header:
     doc: |
@@ -37,7 +42,7 @@ types:
         contents: [1, 0, 0, 0]
       - id: header_size
         type: u4
-      - id: version
+      - id: library_id_stamp
         type: u4
       - id: header
         size: header_size
@@ -52,12 +57,15 @@ types:
       - id: entries
         type: renderware_binary_stream
         repeat: eos
+    instances:
+      version:
+        value: 'library_id_stamp & 0xFFFF0000 != 0 ? (library_id_stamp >> 14 & 0x3FF00) + 0x30000 | (library_id_stamp >> 16 & 0x3F) : library_id_stamp << 8'
   struct_texture_dictionary:
     seq:
       - id: num_textures
         type: u4
   struct_clump:
-    doc-ref: https://www.gtamodding.com/wiki/RpClump
+    doc-ref: https://gtamods.com/wiki/RpClump
     seq:
       - id: num_atomics
         type: u4
@@ -68,7 +76,7 @@ types:
         type: u4
         if: _parent.version >= 0x33000
   struct_frame_list:
-    doc-ref: 'https://www.gtamodding.com/wiki/Frame_List_(RW_Section)#Structure'
+    doc-ref: 'https://gtamods.com/wiki/Frame_List_(RW_Section)#Structure'
     seq:
       - id: num_frames
         type: u4
@@ -77,7 +85,7 @@ types:
         repeat: expr
         repeat-expr: num_frames
   frame:
-    doc-ref: 'https://www.gtamodding.com/wiki/Frame_List_(RW_Section)#Structure'
+    doc-ref: 'https://gtamods.com/wiki/Frame_List_(RW_Section)#Structure'
     seq:
       - id: rotation_matrix
         type: matrix
@@ -88,14 +96,14 @@ types:
       - id: matrix_creation_flags
         type: u4
   matrix:
-    doc-ref: 'https://www.gtamodding.com/wiki/Frame_List_(RW_Section)#Structure'
+    doc-ref: 'https://gtamods.com/wiki/Frame_List_(RW_Section)#Structure'
     seq:
       - id: entries
         type: vector_3d
         repeat: expr
         repeat-expr: 3
   vector_3d:
-    doc-ref: 'https://www.gtamodding.com/wiki/Frame_List_(RW_Section)#Structure'
+    doc-ref: 'https://gtamods.com/wiki/Frame_List_(RW_Section)#Structure'
     seq:
       - id: x
         type: f4
@@ -104,12 +112,12 @@ types:
       - id: z
         type: f4
   struct_geometry_list:
-    doc-ref: 'https://www.gtamodding.com/wiki/Geometry_List_(RW_Section)#Structure'
+    doc-ref: 'https://gtamods.com/wiki/Geometry_List_(RW_Section)#Structure'
     seq:
       - id: num_geometries
         type: u4
   struct_geometry:
-    doc-ref: https://www.gtamodding.com/wiki/RpGeometry
+    doc-ref: https://gtamods.com/wiki/RpGeometry
     seq:
       - id: format
         type: u4
@@ -139,7 +147,7 @@ types:
       is_native:
         value: format & 0x01000000 != 0
   surface_properties:
-    doc-ref: https://www.gtamodding.com/wiki/RpGeometry
+    doc-ref: https://gtamods.com/wiki/RpGeometry
     seq:
       - id: ambient
         type: f4
@@ -217,7 +225,7 @@ types:
       - id: z
         type: f4
       - id: radius
-        type: f4        
+        type: f4
 enums:
   sections:
     0x0001: struct

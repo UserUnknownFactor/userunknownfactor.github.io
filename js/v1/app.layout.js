@@ -8,7 +8,7 @@ define(["require", "exports", "goldenlayout", "../HexViewer"], function (require
             this.dynCompId = 1;
         }
         getLayoutNodeById(id) {
-            return this.layout._getAllContentItems().filter((x) => x.config.id === id || x.componentName === id)[0];
+            return this.layout._getAllContentItems().filter((x) => x.config && x.config.id === id || x.componentName === id)[0];
         }
         addPanel() {
             let componentName = `dynComp${this.dynCompId++}`;
@@ -119,4 +119,3 @@ define(["require", "exports", "goldenlayout", "../HexViewer"], function (require
     }
     exports.UI = UI;
 });
-//# sourceMappingURL=app.layout.js.map

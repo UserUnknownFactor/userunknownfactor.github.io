@@ -8,18 +8,23 @@ define(["require", "exports", "../utils", "./app"], function (require, exports, 
             this.errorWnd = null;
         }
         async show(...args) {
-            console.error.apply(window, args);
-            var errMsg = args.filter(x => x.toString() !== {}.toString()).join(" ");
+            if (args.length) console.error.apply(window, args);
             if (!this.errorWnd) {
+                if (!args.length)
+                    return;
                 var newPanel = app_1.app.ui.layout.addPanel();
-                this.parentContainer.addChild({ type: "component", componentName: newPanel.componentName, title: "Errors" });
+                var container = app_1.app.ui.layout.getLayoutNodeById(this.parentContainer);
+                if (!container) container = this.ui.layout.getLayoutNodeById("mainArea");
+                else container = container.parent;
+                if (!container) return;
+                container.addChild({ type: "component", componentName: newPanel.componentName, title: "Errors" });
                 this.errorWnd = await newPanel.donePromise;
-                this.errorWnd.setSize(0, this.lastErrWndSize);
                 this.errorWnd.getElement().addClass("errorWindow");
             }
             this.errorWnd.on("resize", () => this.lastErrWndSize = this.errorWnd.getElement().outerHeight());
             this.errorWnd.on("destroy", () => { app_1.ga("errorwnd", "destroy"); this.errorWnd = null; });
             this.errorWnd.on("close", () => { app_1.ga("errorwnd", "close"); this.errorWnd = null; });
+            var errMsg = !args.length ? '' : args.filter(x => typeof x !== 'object').join(" ");
             this.errorWnd.getElement().empty().append($("<div>").html(utils_1.htmlescape(errMsg).replace(/\n|\\n/g, "<br>")));
         }
         hide() {
@@ -32,12 +37,23 @@ define(["require", "exports", "../utils", "./app"], function (require, exports, 
             }
         }
         handle(error) {
-            if (error)
-                this.show("Parse error" + (error.name ? ` (${error.name})` : "") + `: ${error.message}\nCall stack: ${error.stack}`, error);
-            else
-                this.hide();
+            if (error) {
+                var msg;
+                if ('getMessage__T' in error && error.toString().startsWith('io.kaitai.struct')) {
+                    msg = error.getMessage__T(); // compile error message
+                }
+                else if (error.toString !== Object.prototype.toString && error.toString !== Error.prototype.toString) {
+                    msg = error.toString();
+                }
+                else {
+                    msg = "Parse error" + (error.name ? ` (${error.name})` : "") + `${error.message ? ': ' + error.message : ''}\nCall stack: ${error.stack}`;
+                }
+                this.show(msg, error);
+            }
+            else {
+               this.show();
+            }
         }
     }
     exports.ErrorWindowHandler = ErrorWindowHandler;
 });
-//# sourceMappingURL=app.errors.js.map

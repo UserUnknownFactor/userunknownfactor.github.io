@@ -8,12 +8,7 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     $.jstree.defaults.core.force_text = true;
-    function ga(category, action, label, value) {
-        console.log(`[GA Event] cat:${category} act:${action} lab:${label || ""}`);
-        if (typeof window["_ga"] !== "undefined")
-            window["_ga"]("send", "event", category, action, label, value);
-    }
-    exports.ga = ga;
+
     const qs = {};
     location.search.substr(1).split("&").map(x => x.split("=")).forEach(x => qs[x[0]] = x[1]);
     let AppVM = class AppVM extends Vue {
@@ -29,7 +24,6 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
         selectInterval(interval) { this.selectionChanged(interval.start, interval.end); }
         selectionChanged(start, end) { this.ui.hexViewer.setSelection(start, end); }
         exportToJson(hex) { ExportToJson_1.exportToJson(hex).then(json => this.ui.layout.addEditorTab("json export", json, "json")); }
-        about() { $("#welcomeModal").modal(); }
     };
     AppVM = __decorate([
         Component_1.default
@@ -50,16 +44,14 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
         init() {
             this.vm.ui = this.ui;
             this.ui.init();
-            this.errors = new app_errors_1.ErrorWindowHandler(this.ui.layout.getLayoutNodeById("mainArea"));
+            this.errors = new app_errors_1.ErrorWindowHandler("converterPanel");
             app_files_1.initFileTree();
         }
         isKsyFile(fn) { return fn.toLowerCase().endsWith(".ksy"); }
         compile(srcYamlFsItem, srcYaml, kslang, debug, readWrite) {
             return this.compilerService.compile(srcYamlFsItem, srcYaml, kslang, debug, readWrite).then(result => {
-                ga("compile", "success");
                 return result;
             }, (error) => {
-                ga("compile", "error", `${error.type}: ${error.error}`);
                 this.errors.handle(error.error);
                 return Promise.reject(error);
             });
@@ -75,21 +67,20 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
             if (changed)
                 await app_files_1.fss[ksyFsItem.fsType].put(ksyFsItem.fn, srcYaml);
             let compiled = await this.compile(ksyFsItem, srcYaml, "javascript", "both", false);
-            if (!compiled)
-                return;
-            var fileNames = Object.keys(compiled.release);
-
             let debugUserTypes = localStorage.getItem("userTypes") || "";
             if (debugUserTypes)
                 debugUserTypes += "\n\n";
-            this.ui.genCodeViewer.setValue(debugUserTypes + fileNames.map(x => compiled.release[x]).join(""), -1);
-            this.ui.genCodeDebugViewer.setValue(debugUserTypes + fileNames.map(x => compiled.debug[x]).join(""), -1);
-            await this.reparse();
+            if (compiled) {
+                var fileNames = Object.keys(compiled.release);
+                this.ui.genCodeViewer.setValue(debugUserTypes + fileNames.map(x => compiled.release[x]).join(""), -1);
+                this.ui.genCodeDebugViewer.setValue(debugUserTypes + fileNames.map(x => compiled.debug[x]).join(""), -1);
+                await this.reparse();
+            }
 
-            let compiledpy = await this.compile(ksyFsItem, srcYaml, "python", "both", false);
-            this.ui.genPythonViewerR.setValue(debugUserTypes + Object.keys(compiledpy.release).map(x => compiledpy.release[x]).join(""), -1);
-            compiledpy = await this.compile(ksyFsItem, srcYaml, "python", "both", true);
-            this.ui.genPythonViewer.setValue(debugUserTypes + Object.keys(compiledpy.release).map(x => compiledpy.release[x]).join(""), -1);
+            compiled = await this.compile(ksyFsItem, srcYaml, "python", "both", false);
+            if (compiled) this.ui.genPythonViewerR.setValue(debugUserTypes + Object.keys(compiled.release).map(x => compiled.release[x]).join(""), -1);
+            compiled = await this.compile(ksyFsItem, srcYaml, "python", "both", true);
+            if (compiled) this.ui.genPythonViewer.setValue(debugUserTypes + Object.keys(compiled.release).map(x => compiled.release[x]).join(""), -1);
         }
         async reparse() {
             try {
@@ -188,8 +179,8 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
     exports.app = new AppController();
     var kaitaiIde = window["kaitaiIde"] = {};
     kaitaiIde.version = "0.1";
-    kaitaiIde.commitId = "5d9fb119933464ec1a17d65964cdaa3ed6a98dca";
-    kaitaiIde.commitDate = "2020-09-13 14:18:25";
+    kaitaiIde.commitId = "e824b3e14fb930b954c749935f5af6e1273c06f8";
+    kaitaiIde.commitDate = "2022-07-08 23:13:36";
     $(() => {
         $("#webIdeVersion").text(kaitaiIde.version);
         $("#webideCommitId")
@@ -216,14 +207,16 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
             let fsItem = await localforage.getItem(cacheKey);
             await exports.app.loadFsItem(fsItem || { fsType: defFsType, fn: defSample, type: "file" }, false);
         }
-        exports.app.inputReady = loadCachedFsItem("inputFsItem", "kaitai", "samples/sample1.zip");
-        exports.app.formatReady = loadCachedFsItem(exports.app.ksyFsItemName, "kaitai", "formats/archive/zip.ksy");
-        exports.app.inputReady.then(() => {
-            var storedSelection = JSON.parse(localStorage.getItem("selection"));
-            if (storedSelection)
-                exports.app.ui.hexViewer.setSelection(storedSelection.start, storedSelection.end);
-        });
         var editDelay = new utils_1.Delayed(500);
+        exports.app.inputReady = loadCachedFsItem("inputFsItem", "kaitai", "samples/sample1.zip");
+        exports.app.inputReady.then(() => {
+            exports.app.formatReady = loadCachedFsItem(exports.app.ksyFsItemName, "kaitai", "formats/archive/zip.ksy");
+            exports.app.formatReady.then(() => {
+                var storedSelection = JSON.parse(localStorage.getItem("selection"));
+                if (storedSelection)
+                    exports.app.ui.hexViewer.setSelection(storedSelection.start, storedSelection.end);
+            });
+        });
         if (!("noAutoCompile" in qs))
             exports.app.ui.ksyEditor.on("change", () => editDelay.do(() => exports.app.recompile()));
         var inputContextMenu = $("#inputContextMenu");
@@ -255,8 +248,7 @@ define(["require", "exports", "localforage", "vue", "./app.layout", "./app.files
             utils_1.saveFile(new Uint8Array(exports.app.inputContent, start, end - start + 1), newFn);
         });
         kaitaiIde.app = exports.app;
-        utils_1.precallHook(exports.app.ui.layout.layout.constructor["__lm"].controls, "DragProxy", () => ga("layout", "window_drag"));
-        $("body").on("mousedown", ".lm_drag_handle", () => { ga("layout", "splitter_drag"); });
+        utils_1.precallHook(exports.app.ui.layout.layout.constructor["__lm"].controls, "DragProxy", () => {});
+        $("body").on("mousedown", ".lm_drag_handle", () => {});
     });
 });
-//# sourceMappingURL=app.js.map

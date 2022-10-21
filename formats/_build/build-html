@@ -12,17 +12,22 @@ require 'cgi'
 require 'set'
 
 require 'commonmarker'
+require 'pygments'
 
 class FormatPagesGenerator
+  CPP_STL_CANONICAL = {id: 'cpp_stl', name: 'C++/STL'}
   LANGS = {
-    'index' => {name: 'Overview'},
+    'index' => {name: 'Overview', lexer: 'yaml'},
 
-    'cpp_stl' => {name: 'C++/STL'},
+    'cpp_stl_11' => {name: 'C++11/STL', lexer: 'cpp', canonical: CPP_STL_CANONICAL},
+    'cpp_stl_98' => {name: 'C++98/STL', lexer: 'cpp', canonical: CPP_STL_CANONICAL},
     'csharp' => {name: 'C#', ext: 'cs'},
+    'go' => {name: 'Go', ext: 'go'},
     'graphviz' => {name: 'GraphViz', ext: 'dot'},
     'java' => {name: 'Java', ext: 'java'},
     'javascript' => {name: 'JavaScript', ext: 'js'},
     'lua' => {name: 'Lua', ext: 'lua'},
+    'nim' => {name: 'Nim', ext: 'nim'},
     'perl' => {name: 'Perl', ext: 'pm'},
     'php' => {name: 'PHP', ext: 'php'},
     'python' => {name: 'Python', ext: 'py'},
@@ -30,10 +35,13 @@ class FormatPagesGenerator
   }
 
   CATS = {
+    '3d' => {title: '3D Models', icon: 'cube'},
     'archive' => {title: 'Archive Files', icon: 'archive'},
+    'android' => {title: 'Android-specific', icon: 'android'},
     'cad' => {title: 'CAD', icon: 'space-shuttle'},
     'common' => {title: 'Commonly Used Data Types', icon: 'arrows'},
     'database' => {title: 'Databases', icon: 'database'},
+    'dos' => {title: 'DOS-specific', icon: 'terminal'},
     'executable' => {title: 'Executables and Byte-code', icon: 'gears'},
     'filesystem' => {title: 'Filesystems', icon: 'hdd-o'},
     'firmware' => {title: 'Firmware', icon: 'microchip'},
@@ -42,6 +50,7 @@ class FormatPagesGenerator
     'geospatial' => {title: 'Geospatial (Maps)', icon: 'map'},
     'hardware' => {title: 'Hardware Protocols', icon: 'microchip'},
     'image' => {title: 'Image Files', icon: 'file-image-o'},
+    'linux' => {title: 'GNU/Linux-specific', icon: 'linux'},
     'log' => {title: 'Logs', icon: 'database'},
     'machine_code' => {title: 'CPU / Machine Code Disassembly', icon: 'industry'},
     'macos' => {title: 'macOS-specific', icon: 'apple'},
@@ -60,11 +69,17 @@ class FormatPagesGenerator
     'WTFPL',
   ])
 
+  def code(lang, src)
+    Pygments.highlight(src, :lexer => LANGS[lang][:lexer] || lang)
+  end
+
   def initialize(ksy_dir, target_dir, html_dir)
     @ksy_dir = File.realpath(ksy_dir)
     @target_dir = File.realpath(target_dir)
     FileUtils::mkdir_p(html_dir)
     @html_dir = File.realpath(html_dir)
+
+    File.write("#{@html_dir}/pygments-default.css", Pygments.css('.highlight'))
 
     @erb_header = erb('header')
     @erb_fheader = erb('format_header')
@@ -76,8 +91,9 @@ class FormatPagesGenerator
 
     @erb_usage = {}
     LANGS.each_key { |lang|
-      fn = "usage_#{lang}"
-      @erb_usage[lang] = erb("usage_#{lang}") if FileTest.exists?("#{fn}.html.erb")
+      lang_prim = LANGS[lang].fetch(:canonical, {})[:id] || lang
+      fn = "usage_#{lang_prim}"
+      @erb_usage[lang] = erb(fn) if FileTest.exists?("#{fn}.html.erb")
     }
 
     @base_url = '//kaitai.io/'
@@ -95,6 +111,9 @@ class FormatPagesGenerator
         file_id = yaml['meta']['id']
         file_dir = "#{@html_dir}/#{file_id}"
         cat_id = File::dirname(ksy).gsub(/\/.*$/, '')
+
+        file_tags = Set.new(yaml['meta']['tags']) || Set.new
+        file_tags << cat_id
 
         puts
         puts "## #{file_id}"
@@ -115,10 +134,14 @@ class FormatPagesGenerator
         generate_base_page(file_id, file_dir, yaml, yaml_str, cat_id, good_langs)
 
         @all[file_id] = yaml
-        @by_cat[cat_id] ||= []
-        @by_cat[cat_id] << {
+        by_cat_record = {
           :id => file_id,
           :ksy => ksy,
+        }
+
+        file_tags.each { |tag|
+          @by_cat[tag] ||= []
+          @by_cat[tag] << by_cat_record
         }
       rescue Psych::SyntaxError => e
         $stderr.puts "## on file #{ksy.inspect}"
@@ -167,7 +190,6 @@ class FormatPagesGenerator
         begin
           puts "    * reading source file #{out_dir}/#{path}"
           src = File.read("#{out_dir}/#{path}")
-          src = CGI::escape_html(src)
         rescue Errno::ENOENT
           puts "      ... not found!"
           src = nil
@@ -199,7 +221,7 @@ class FormatPagesGenerator
 
   def generate_xref
     File.open("#{@html_dir}/xref.html", 'w') { |out|
-      page_title = "File Formats Cross-References for Kaitai Struct"
+      page_title = "File Format Cross-References for Kaitai Struct"
       out.write @erb_header.result(binding)
       out.write @erb_xref.result(binding)
       out.write @erb_footer.result(binding)
@@ -272,21 +294,22 @@ class FormatPagesGenerator
   end
 
   def source_file_gen_names(file_id, lang)
+    src_files = source_file_names(file_id, lang)
     case lang
-    when 'java'
-      ["src/#{ucc(file_id)}.java"]
+    when 'go', 'java'
+      src_files.map { |file| "src/#{file}" }
     else
-      source_file_names(file_id, lang)
+      src_files
     end
   end
 
   def source_file_names(file_id, lang)
     case lang
-    when 'cpp_stl'
+    when 'cpp_stl_98', 'cpp_stl_11'
       ["#{file_id}.h", "#{file_id}.cpp"]
     when 'csharp', 'java', 'javascript', 'perl', 'php'
       ["#{ucc(file_id)}.#{LANGS[lang][:ext]}"]
-    when 'graphviz', 'ruby', 'python'
+    when 'go', 'graphviz', 'lua', 'nim', 'ruby', 'python'
       ["#{file_id}.#{LANGS[lang][:ext]}"]
     else
       []
@@ -332,11 +355,11 @@ class FormatPagesGenerator
     when 'iso'
       nil
     when 'forensicswiki'
-      "http://forensicswiki.org/wiki/#{value}"
+      "https://forensicswiki.xyz/page/#{value}"
     when 'justsolve'
       "http://fileformats.archiveteam.org/wiki/#{value}"
     when 'loc'
-      "http://www.loc.gov/preservation/digital/formats/fdd/#{value}.shtml"
+      "https://www.loc.gov/preservation/digital/formats/fdd/#{value}.shtml"
     when 'mime'
       "https://www.iana.org/assignments/media-types/#{value}"
     when 'pronom'
